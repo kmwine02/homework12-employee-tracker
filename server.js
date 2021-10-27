@@ -87,4 +87,4 @@ const updateEmployee = [
     name: "employee",
     message: "Select an employee to update:"
   }
-]
+];
