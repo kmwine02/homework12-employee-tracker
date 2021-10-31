@@ -10,11 +10,10 @@ const db = mysql.createConnection(
     password: "password",
     database: "employees_db",
   }
-  // console.log(`Connected to the employees_db database.`)
 );
 db.connect(function (err) {
-  init();
 });
+
 
 const initialQuestions = [
   {
@@ -30,57 +29,6 @@ const initialQuestions = [
       "Add an employee",
       "Update an employee",
     ],
-  },
-];
-
-const addDepartmentQuestion = [
-  {
-    type: "input",
-    name: "addDepartment",
-    message: "Enter the name of the department you would like to add:",
-  },
-];
-
-const addRoleQuestions = [
-  {
-    type: "input",
-    name: "roleName",
-    message: "Enter the name of the role you would like to add:",
-  },
-  {
-    type: "input",
-    name: "salary",
-    message: "Enter the salary for the role:",
-  },
-  // how to add a dynamic list for existing departments
-  {
-    type: "input",
-    name: "department",
-    message: "Enter a department for the role:",
-  },
-];
-
-const addEmployeeQuestions = [
-  {
-    type: "input",
-    name: "firstName",
-    message: "Enter the new employee's first name:",
-  },
-  {
-    type: "input",
-    name: "lastName",
-    message: "Enter the new employee's last name:",
-  },
-  // add a dynamic list for roles available
-  {
-    type: "input",
-    name: "role",
-    message: "Select a role for the new employee:",
-  },
-  {
-    type: "input",
-    name: "manager",
-    message: "Select a manager for the new employee:",
   },
 ];
 
@@ -103,23 +51,23 @@ const viewDepartments = () => {
 };
 
 const viewRoles = () => {
-  db.query(`select * from roles`, (err, data) => {
-    if(err) {
-      console.log(err);
-    }
-    console.table(data);
-    process.exit();
-  });
+    db.query(`select * from roles`, (err, data) => {
+      if(err) {
+        console.log(err);
+      }
+      console.table(data);
+      process.exit();
+    });
 };
 
 const viewEmployees = () => {
-  db.query(`select * from employees`, (err, data) => {
-    if(err) {
-      console.log(err);
-    }
-    console.table(data);
-    process.exit();
-  });
+    db.query(`select * from employees`, (err, data) => {
+      if(err) {
+        console.log(err);
+      }
+      console.table(data);
+      process.exit();
+    });
 };
 
 const addDepartment = (department) => {
@@ -138,56 +86,141 @@ const addDepartment = (department) => {
 };
 
 const addRole = (role) => {
-  db.query(`insert into roles (title, salary, department_id) value (?)`, [role], (err, data) => {
-    if(err) {
-      console.log(err);
-    }
-    db.query(`select * from roles`, (err, data) => {
+  db.query(`select id from departments where name=?`, [role.department], (err, result) => {
+    const departmentID = result[0].id;
+    db.query(`insert into roles (title, salary, department_id) value (?, ?, ?)`, [role.roleName, role.salary, departmentID], (err, data) => {
       if(err) {
         console.log(err);
       }
-      console.table(data);
-      process.exit();
+      viewRoles();
     });
+  });
+
+};
+
+const addEmployee = (employee) => {
+  console.log(employee);
+  db.query(`select id from roles where title=?`, [employee.role], (err, result) => {
+    const roleID = result[0].id;
+    console.log("result", result);
+    console.log("role id", roleID);
+    db.query(`select id from employees where concat(first_name, ' ', last_name) = ?`, [employee.manager], (err, result2) => {
+      console.log(result2);
+      const managerID = result2[0].id;
+      console.log(managerID);
+      db.query(`insert into employees (first_name, last_name, role_id, manager_id) value (?, ?, ?, ?)`, [employee.firstName, employee.lastName, roleID, managerID], (err, data) => {
+        if(err) {
+          console.log(err);
+        }
+        viewEmployees();
+      });
+    }); 
   });
 };
 
-async function init() {
-  let answers = await inquirer.prompt(initialQuestions);
-  console.log(answers);
+//starts the employee manager application and prompts the initial question asking what action the user wants to take
+const startEmployeeManager = async () => {
+  const selection = await inquirer.prompt(initialQuestions);
+  startQuestions(selection.task);
+}
 
-  if (answers.task === "View all departments") {
-    console.log("View all departments");
+// uses the answer selected and prompts either more questions or shows the requested data
+const startQuestions= async answer => {
+  if (answer === "View all departments") {
     viewDepartments();
-  } else if (answers.task === "View all roles") {
-    console.log(answers.task);
-    viewRoles();
-  } else if (answers.task === "View all employees") {
-    console.log(answers.task);
-    viewEmployees();
-  } else if (answers.task === "Add a department") {
-    console.log(answers.task);
-    const newDepartment = await inquirer.prompt(addDepartmentQuestion);
 
-    console.log(newDepartment.addDepartment);
+  } else if (answer === "View all roles") {
+    viewRoles();
+
+  } else if (answer === "View all employees") {
+    viewEmployees();
+
+  } else if (answer === "Add a department") {
+    const addDepartmentQuestion = [
+      {
+        type: "input",
+        name: "addDepartment",
+        message: "Enter the name of the department you would like to add:",
+      },
+    ];
+    const newDepartment = await inquirer.prompt(addDepartmentQuestion);
     addDepartment(newDepartment.addDepartment);
-  } else if (answers.task === "Add a role") {
-    console.log(answers.task);
+
+  } else if (answer === "Add a role") {
+    const [dbDepartments] = await db.promise().query('select * from departments');
+    const departments = dbDepartments.map(dept => ({id: dept.id, name: dept.name}));
+    console.log("departments", departments);
+    
+    const addRoleQuestions = [
+      {
+        type: "input",
+        name: "roleName",
+        message: "Enter the name of the role you would like to add:",
+      },
+      {
+        type: "input",
+        name: "salary",
+        message: "Enter the salary for the role:",
+      },
+      {
+        type: "list",
+        name: "department",
+        message: "Choose a department for the role:",
+        choices: departments
+      },
+    ];
     const newRole = await inquirer.prompt(addRoleQuestions);
     console.log(newRole);
+    addRole(newRole);
 
-    
-  } else if (answers.task === "Add an employee") {
-    console.log(answers.task);
-    db.query(`select * from employees`, (err, data) => {
-      console.table(data);
-      process.exit();
-    });
-  } else if (answers.task === "Update an employee") {
-    console.log(answer.task);
+  } else if (answer === "Add an employee") {
+    const [dbRoles] = await db.promise().query(`select * from roles`);
+    const roles = dbRoles.map(role => {return role.title});
+
+    const [dbManager] = await db.promise().query(`select concat(first_name, ' ', last_name) as manager from employees`);
+    const manager = dbManager.map(mgr => {return mgr.manager});
+    console.log("manager", manager);
+
+    const addEmployeeQuestions = [
+      {
+        type: "input",
+        name: "firstName",
+        message: "Enter the new employee's first name:",
+      },
+      {
+        type: "input",
+        name: "lastName",
+        message: "Enter the new employee's last name:",
+      },
+      {
+        type: "list",
+        name: "role",
+        message: "Select a role for the new employee:",
+        choices: roles
+      },
+      {
+        type: "list",
+        name: "manager",
+        message: "Select a manager for the new employee:",
+        choices: manager
+      },
+    ];
+
+    const newEmployee = await inquirer.prompt(addEmployeeQuestions);
+    addEmployee(newEmployee);
+
+
+  } else if (answer === "Update an employee") {
+    console.log(answer);
     db.query(`select * from employees`, (err, data) => {
       console.table(data);
       process.exit();
     })
   }
 };
+
+function init() {
+  startEmployeeManager();
+};
+
+init();
