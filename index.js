@@ -1,6 +1,8 @@
 const inquirer = require("inquirer");
 const mysql = require("mysql2");
+const cTable = require('console.table');
 
+// creates connection to database
 const db = mysql.createConnection({
   host: "localhost",
   // MySQL username,
@@ -11,25 +13,27 @@ const db = mysql.createConnection({
 });
 db.connect(function (err) {});
 
+// first questions asked to the user
 const initialQuestions = [
   {
     type: "list",
     name: "task",
     message: "Choose an action:",
     choices: [
-      "View all departments",
-      "View all roles",
-      "View all employees",
-      "Add a department",
-      "Add a role",
-      "Add an employee",
-      "Update an employee",
+      "View All Employees",
+      "Add Employee",
+      "Update Employee Role",
+      "View All Roles",
+      "Add Role",
+      "View All Departments",
+      "Add Department",
+      "Quit"
     ],
   },
 ];
 
 const viewDepartments = () => {
-  db.query(`select * from departments`, (err, data) => {
+  db.query(`select id as 'ID', name as 'Department Name' from departments`, (err, data) => {
     if (err) {
       console.log(err);
     }
@@ -39,7 +43,18 @@ const viewDepartments = () => {
 };
 
 const viewRoles = () => {
-  db.query(`select * from roles`, (err, data) => {
+  db.query(`
+  select 
+  r.id as 'ID', 
+  r.title as 'Title', 
+  d.name as 'Department Name', 
+  r.salary as 'Salary'  
+  from 
+  roles r 
+  join 
+  departments d on r.department_id = d.id
+  order by r.id
+  `, (err, data) => {
     if (err) {
       console.log(err);
     }
@@ -49,7 +64,21 @@ const viewRoles = () => {
 };
 
 const viewEmployees = () => {
-  db.query(`select * from employees`, (err, data) => {
+  db.query(`
+  select 
+  e.id as 'ID',
+  e.first_name as 'First Name',
+  e.last_name as 'Last Name',
+  r.title as 'Title',
+  d.name as 'Department',
+  r.salary as 'Salary',
+  concat (em.first_name, ' ', em.last_name) as 'Manager'
+  from 
+  employees e
+  join roles r on r.id = e.role_id
+  join departments d on d.id = r.department_id
+  left join employees em on e.manager_id = em.id
+  `, (err, data) => {
     if (err) {
       console.log(err);
     }
@@ -127,13 +156,21 @@ const startEmployeeManager = async () => {
 
 // uses the answer selected and prompts either more questions or shows the requested data
 const startQuestions = async (answer) => {
-  if (answer === "View all departments") {
+  switch (answer) {
+  case "View All Departments":
     viewDepartments();
-  } else if (answer === "View all roles") {
+
+    break;
+
+   case "View All Roles":
     viewRoles();
-  } else if (answer === "View all employees") {
+    break;
+
+  case "View All Employees":
     viewEmployees();
-  } else if (answer === "Add a department") {
+    break;
+
+  case "Add Department":
     const addDepartmentQuestion = [
       {
         type: "input",
@@ -143,15 +180,15 @@ const startQuestions = async (answer) => {
     ];
     const newDepartment = await inquirer.prompt(addDepartmentQuestion);
     addDepartment(newDepartment.addDepartment);
-  } else if (answer === "Add a role") {
-    const [dbDepartments] = await db
-      .promise()
-      .query("select * from departments");
+    break;
+
+  case "Add Role":
+    // creating array to display existing departments
+    const [dbDepartments] = await db.promise().query("select * from departments");
     const departments = dbDepartments.map((dept) => ({
       id: dept.id,
       name: dept.name,
     }));
-    console.log("departments", departments);
 
     const addRoleQuestions = [
       {
@@ -172,23 +209,17 @@ const startQuestions = async (answer) => {
       },
     ];
     const newRole = await inquirer.prompt(addRoleQuestions);
-    console.log(newRole);
     addRole(newRole);
-  } else if (answer === "Add an employee") {
-    const [dbRoles] = await db.promise().query(`select * from roles`);
-    const roles = dbRoles.map((role) => {
-      return role.title;
-    });
+    break;
 
-    const [dbManager] = await db
-      .promise()
-      .query(
-        `select concat(first_name, ' ', last_name) as manager from employees`
-      );
-    const manager = dbManager.map((mgr) => {
-      return mgr.manager;
-    });
-    console.log("manager", manager);
+  case "Add Employee":
+    // creating array to display existing roles
+    const [dbRoles] = await db.promise().query(`select * from roles`);
+    const roles = dbRoles.map((role) => {return role.title;});
+
+    // creating array to display existing employees
+    const [dbManager] = await db.promise().query(`select concat(first_name, ' ', last_name) as manager from employees`);
+    const manager = dbManager.map((mgr) => {return mgr.manager;});
 
     const addEmployeeQuestions = [
       {
@@ -217,17 +248,16 @@ const startQuestions = async (answer) => {
 
     const newEmployee = await inquirer.prompt(addEmployeeQuestions);
     addEmployee(newEmployee);
-  } else if (answer === "Update an employee") {
+    break;
+
+  case "Update Employee":
     // creating array to display existing employees
-    const [dbEmployees] = await db.promise().query(
-        `select concat(first_name, ' ', last_name) as employee from employees`);
+    const [dbEmployees] = await db.promise().query(`select concat(first_name, ' ', last_name) as employee from employees`);
     const employees = dbEmployees.map(emp => {return emp.employee})
 
     // creating array to display existing roles
-    const [dbRoles] = await db.promise().query(`select * from roles`);
-    const roles = dbRoles.map((role) => {
-      return role.title;
-    });
+    const [dbRoles1] = await db.promise().query(`select * from roles`);
+    const roles1 = dbRoles1.map((role1) => {return role1.title;});
     const updateEmployeeQuestions = [
       {
         type: "list",
@@ -239,12 +269,17 @@ const startQuestions = async (answer) => {
         type: "list",
         name: "role",
         message: "Which role do you want to assign the selected employee?",
-        choices: roles
+        choices: roles1
       },
     ];
 
     const updatedEmployee = await inquirer.prompt(updateEmployeeQuestions);
     updateEmployee(updatedEmployee);
+    break;
+
+  case "Quit":
+    process.exit();
+    break;
   }
 };
 
