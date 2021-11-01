@@ -38,7 +38,7 @@ const viewDepartments = () => {
       console.log(err);
     }
     console.table(data);
-    process.exit();
+    startEmployeeManager();
   });
 };
 
@@ -59,7 +59,7 @@ const viewRoles = () => {
       console.log(err);
     }
     console.table(data);
-    process.exit();
+    startEmployeeManager();
   });
 };
 
@@ -83,7 +83,7 @@ const viewEmployees = () => {
       console.log(err);
     }
     console.table(data);
-    process.exit();
+    startEmployeeManager();
   });
 };
 
@@ -98,7 +98,6 @@ const addDepartment = (department) => {
           console.log(err);
         }
         console.table(data);
-        process.exit();
       });
     });
 };
@@ -143,6 +142,7 @@ const updateEmployee = (employee) => {
           console.log(err);
         }
         console.log("Employee recorded successfully updated.");
+        startEmployeeManager();
       })
     })
   })
@@ -151,15 +151,14 @@ const updateEmployee = (employee) => {
 //starts the employee manager application and prompts the initial question asking what action the user wants to take
 const startEmployeeManager = async () => {
   const selection = await inquirer.prompt(initialQuestions);
-  startQuestions(selection.task);
+  viewSelectedAction(selection.task);
 };
 
 // uses the answer selected and prompts either more questions or shows the requested data
-const startQuestions = async (answer) => {
+const viewSelectedAction = async (answer) => {
   switch (answer) {
   case "View All Departments":
     viewDepartments();
-
     break;
 
    case "View All Roles":
