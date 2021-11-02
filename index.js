@@ -38,7 +38,7 @@ const viewDepartments = () => {
       console.log(err);
     }
     console.table(data);
-    startEmployeeManager();
+    console.log("Press up or down arrow to continue");
   });
 };
 
@@ -59,7 +59,7 @@ const viewRoles = () => {
       console.log(err);
     }
     console.table(data);
-    startEmployeeManager();
+    console.log("Press up or down arrow to continue");
   });
 };
 
@@ -83,7 +83,7 @@ const viewEmployees = () => {
       console.log(err);
     }
     console.table(data);
-    startEmployeeManager();
+    console.log("Press up or down arrow to continue");
   });
 };
 
@@ -98,6 +98,7 @@ const addDepartment = (department) => {
           console.log(err);
         }
         console.table(data);
+        console.log("Press up or down arrow to continue");
       });
     });
 };
@@ -111,6 +112,7 @@ const addRole = (role) => {
             console.log(err);
           }
           viewRoles();
+          console.log("Press up or down arrow to continue");
         });
     });
 };
@@ -127,6 +129,7 @@ const addEmployee = (employee) => {
                 console.log(err);
               }
               viewEmployees();
+              console.log("Press up or down arrow to continue");
             });
         });
     });
@@ -141,8 +144,6 @@ const updateEmployee = (employee) => {
         if(err) {
           console.log(err);
         }
-        console.log("Employee recorded successfully updated.");
-        startEmployeeManager();
       })
     })
   })
@@ -159,14 +160,17 @@ const viewSelectedAction = async (answer) => {
   switch (answer) {
   case "View All Departments":
     viewDepartments();
+    startEmployeeManager();
     break;
 
    case "View All Roles":
     viewRoles();
+    startEmployeeManager();
     break;
 
   case "View All Employees":
     viewEmployees();
+    startEmployeeManager();
     break;
 
   case "Add Department":
@@ -179,6 +183,7 @@ const viewSelectedAction = async (answer) => {
     ];
     const newDepartment = await inquirer.prompt(addDepartmentQuestion);
     addDepartment(newDepartment.addDepartment);
+    startEmployeeManager();
     break;
 
   case "Add Role":
@@ -209,6 +214,7 @@ const viewSelectedAction = async (answer) => {
     ];
     const newRole = await inquirer.prompt(addRoleQuestions);
     addRole(newRole);
+    startEmployeeManager();
     break;
 
   case "Add Employee":
@@ -247,9 +253,10 @@ const viewSelectedAction = async (answer) => {
 
     const newEmployee = await inquirer.prompt(addEmployeeQuestions);
     addEmployee(newEmployee);
+    startEmployeeManager();
     break;
 
-  case "Update Employee":
+  case "Update Employee Role":
     // creating array to display existing employees
     const [dbEmployees] = await db.promise().query(`select concat(first_name, ' ', last_name) as employee from employees`);
     const employees = dbEmployees.map(emp => {return emp.employee})
@@ -274,6 +281,8 @@ const viewSelectedAction = async (answer) => {
 
     const updatedEmployee = await inquirer.prompt(updateEmployeeQuestions);
     updateEmployee(updatedEmployee);
+    console.log("Employee record successfully updated");
+    startEmployeeManager();
     break;
 
   case "Quit":
